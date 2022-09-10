@@ -2,6 +2,12 @@ import platform from "../img/platform.png";
 import hills from "../img/hills.png";
 import background from "../img/background.png";
 import platformSmallTall from "../img/platformSmallTall.png";
+
+import spriteRunLeft from "../img/spriteRunLeft.png";
+import spriteRunRight from "../img/spriteRunRight.png";
+import spriteStandLeft from "../img/spriteStandLeft.png";
+import spriteStandRight from "../img/spriteStandRight.png";
+import flag from "../img/flag.png";
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
 // function add_img() {
@@ -27,15 +33,58 @@ class Player {
       x: 0,
       y: 0,
     };
-    this.width = 30;
-    this.height = 30;
+    this.width = 66;
+    this.height = 150;
+
+    this.image = createImage(spriteStandRight);
+    this.frames = 0;
+    this.sprites = {
+      stand: {
+        right: createImage(spriteStandRight),
+        left: createImage(spriteStandLeft),
+        cropWidth: 177,
+        width: 66,
+      },
+      run: {
+        right: createImage(spriteRunRight),
+        left: createImage(spriteRunLeft),
+        cropWidth: 341,
+        width: 127.875,
+      },
+    };
+
+    this.currentSprite = this.sprites.stand.right;
+    this.currentCropWidth = 177;
   }
 
   draw() {
-    c.fillStyle = "red";
-    c.fillRect(this.position.x, this.position.y, this.width, this.height);
+    c.drawImage(
+      this.currentSprite,
+      this.currentCropWidth * this.frames,
+      0,
+      this.currentCropWidth,
+      400,
+      this.position.x,
+      this.position.y,
+      this.width,
+      this.height
+    );
   }
   update() {
+    this.frames++;
+    if (
+      this.frames > 59 &&
+      (this.currentSprite === this.sprites.stand.right ||
+        this.currentSprite === this.sprites.stand.left)
+    )
+      this.frames = 0;
+    else if (
+      this.frames > 29 &&
+      (this.currentSprite === this.sprites.run.right ||
+        this.currentSprite === this.sprites.run.left)
+    )
+      this.frames = 0;
+
     this.draw();
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
@@ -81,9 +130,12 @@ function createImage(imageSrc) {
 }
 let platformImage = createImage(platform);
 let platformSmallTallImage = createImage(platformSmallTall);
+let flags = createImage(flag);
 let player = new Player();
 let platforms = [];
 let genericObjects = [];
+let lastKey;
+
 const keys = {
   right: {
     pressed: false,
@@ -113,6 +165,11 @@ function init() {
       image: createImage(platformSmallTall),
     }),
     new Platform({
+      x: platformImage.width * 8 + 1300,
+      y: 270,
+      image: createImage(platformSmallTall),
+    }),
+    new Platform({
       x: -1,
       y: 470,
       image: platformImage,
@@ -120,7 +177,7 @@ function init() {
 
     new Platform({ x: platformImage.width - 3, y: 470, image: platformImage }),
     new Platform({
-      x: platformImage.width * 2 + 100,
+      x: platformImage.width * 2 + 150,
       y: 470,
       image: platformImage,
     }),
@@ -135,9 +192,29 @@ function init() {
       image: platformImage,
     }),
     new Platform({
-      x: platformImage.width * 5 + 300 - 2,
+      x: platformImage.width * 5 + 700 - 2,
       y: 470,
       image: platformImage,
+    }),
+    new Platform({
+      x: platformImage.width * 6 + 900,
+      y: 370,
+      image: platformImage,
+    }),
+    new Platform({
+      x: platformImage.width * 7 + 1100,
+      y: 470,
+      image: platformImage,
+    }),
+    new Platform({
+      x: platformImage.width * 9 + 1450,
+      y: 470,
+      image: platformImage,
+    }),
+    new Platform({
+      x: platformImage.width * 9 + 1750,
+      y: 380,
+      image: flags,
     }),
   ];
   genericObjects = [
@@ -212,11 +289,52 @@ function animate() {
       player.velocity.y = 0;
     }
   });
+  // sprite switching conditional
+  if (
+    keys.right.pressed &&
+    lastKey === "right" &&
+    player.currentSprite !== player.sprites.run.right
+  ) {
+    player.frames = 1;
+    player.currentSprite = player.sprites.run.right;
+    player.currentCropWidth = player.sprites.run.cropWidth;
+    player.width = player.sprites.run.width;
+  } else if (
+    keys.left.pressed &&
+    lastKey === "left" &&
+    player.currentSprite !== player.sprites.run.left
+  ) {
+    player.currentSprite = player.sprites.run.left;
+    player.currentCropWidth = player.sprites.run.cropWidth;
+    player.width = player.sprites.run.width;
+  } else if (
+    !keys.left.pressed &&
+    lastKey === "left" &&
+    player.currentSprite !== player.sprites.stand.left
+  ) {
+    player.currentSprite = player.sprites.stand.left;
+    player.currentCropWidth = player.sprites.stand.cropWidth;
+    player.width = player.sprites.stand.width;
+  } else if (
+    !keys.right.pressed &&
+    lastKey === "right" &&
+    player.currentSprite !== player.sprites.stand.right
+  ) {
+    player.currentSprite = player.sprites.stand.right;
+    player.currentCropWidth = player.sprites.stand.cropWidth;
+    player.width = player.sprites.stand.width;
+  }
 
   // win codnition
-  if (scrollOffset > platformImage.width * 5 + 700 - 2) {
+  if (scrollOffset >= platformImage.width * 9 + 1400) {
     console.log(`You win papam padaaam`);
+    if (confirm("you win !  press okay to restar")) {
+      init();
+    } else {
+      console.log("You pressed Cancel!");
+    }
   }
+
   // lose condition
   if (player.position.y > canvas.height) {
     init();
@@ -230,18 +348,22 @@ window.addEventListener("keydown", ({ keyCode }) => {
     case 65:
       console.log("left");
       keys.left.pressed = true;
+      lastKey = "left";
+
       break;
     case 83:
       console.log("down");
       break;
-    case 87:
-      console.log("up");
-      player.velocity.y -= 25;
-      break;
+
     case 68:
       console.log("right");
       keys.right.pressed = true;
+      lastKey = "right";
 
+      break;
+    case 87:
+      console.log("up");
+      player.velocity.y -= 25;
       break;
   }
 });
